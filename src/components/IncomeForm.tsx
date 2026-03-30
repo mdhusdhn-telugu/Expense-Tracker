@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react';
-import { INCOME_CATEGORIES, IncomeCategory } from '../types';
+import { IncomeCategory, CategoryDefinition, CURRENCIES } from '../types';
 
 interface IncomeFormProps {
+  categories: CategoryDefinition[];
   onAddIncome: (income: { amount: number; category: IncomeCategory; description: string; date: string }) => void;
+  currency: string;
 }
 
-export default function IncomeForm({ onAddIncome }: IncomeFormProps) {
+export default function IncomeForm({ categories, onAddIncome, currency }: IncomeFormProps) {
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<IncomeCategory>('Salary');
+  const [category, setCategory] = useState<IncomeCategory>('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '$';
+
+  useEffect(() => {
+    if (categories.length > 0 && !category) {
+      setCategory(categories[0].name);
+    }
+  }, [categories, category]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description || !date) return;
+    if (!amount || !description || !date || !category) return;
 
     onAddIncome({
       amount: parseFloat(amount),
@@ -34,15 +44,18 @@ export default function IncomeForm({ onAddIncome }: IncomeFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</label>
-          <input
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-            required
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{currencySymbol}</span>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full pl-7 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              required
+            />
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -52,8 +65,8 @@ export default function IncomeForm({ onAddIncome }: IncomeFormProps) {
             onChange={(e) => setCategory(e.target.value as IncomeCategory)}
             className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
           >
-            {INCOME_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>{cat.name}</option>
             ))}
           </select>
         </div>

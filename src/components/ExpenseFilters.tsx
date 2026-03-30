@@ -1,5 +1,5 @@
 import { Search, Filter, X } from 'lucide-react';
-import { CATEGORIES, Category } from '../types';
+import { Category, CategoryDefinition } from '../types';
 
 export interface FilterCriteria {
   search: string;
@@ -13,9 +13,10 @@ export interface FilterCriteria {
 interface ExpenseFiltersProps {
   filters: FilterCriteria;
   onFilterChange: (filters: FilterCriteria) => void;
+  categories: CategoryDefinition[];
 }
 
-export default function ExpenseFilters({ filters, onFilterChange }: ExpenseFiltersProps) {
+export default function ExpenseFilters({ filters, onFilterChange, categories }: ExpenseFiltersProps) {
   const handleChange = (key: keyof FilterCriteria, value: string) => {
     onFilterChange({ ...filters, [key]: value });
   };
@@ -79,8 +80,8 @@ export default function ExpenseFilters({ filters, onFilterChange }: ExpenseFilte
             className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white text-sm"
           >
             <option value="All">All Categories</option>
-            {CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.name}>{cat.name}</option>
             ))}
           </select>
         </div>

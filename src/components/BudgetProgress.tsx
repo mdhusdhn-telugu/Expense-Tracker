@@ -1,13 +1,20 @@
 import { motion } from 'motion/react';
-import { Expense, Category, CategoryBudget, CATEGORY_COLORS } from '../types';
-import { cn } from '../lib/utils';
+import { Expense, Category, CategoryBudget, CategoryDefinition } from '../types';
+import { cn, formatCurrency } from '../lib/utils';
 
 interface BudgetProgressProps {
   expenses: Expense[];
   budgets: CategoryBudget;
+  categories: CategoryDefinition[];
+  timeRange: number;
+  currency: string;
 }
 
-export default function BudgetProgress({ expenses, budgets }: BudgetProgressProps) {
+export default function BudgetProgress({ expenses, budgets, categories, timeRange, currency }: BudgetProgressProps) {
+  const getCategoryColor = (categoryName: string) => {
+    return categories.find(c => c.name === categoryName)?.color || '#94a3b8';
+  };
+
   const categorySpending = expenses.reduce((acc, curr) => {
     acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
     return acc;
@@ -28,7 +35,8 @@ export default function BudgetProgress({ expenses, budgets }: BudgetProgressProp
       <h2 className="text-lg font-bold text-slate-800">Budget Progress</h2>
       
       <div className="space-y-5">
-        {activeBudgets.map(([category, limit]) => {
+        {activeBudgets.map(([category, monthlyLimit]) => {
+          const limit = monthlyLimit * timeRange;
           const spent = categorySpending[category] || 0;
           const percentage = Math.min((spent / limit) * 100, 100);
           const isOver = spent > limit;
@@ -39,7 +47,7 @@ export default function BudgetProgress({ expenses, budgets }: BudgetProgressProp
                 <div>
                   <span className="text-sm font-bold text-slate-700">{category}</span>
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                    ${spent.toLocaleString()} of ${limit.toLocaleString()}
+                    {formatCurrency(spent, currency)} of {formatCurrency(limit, currency)}
                   </p>
                 </div>
                 <span className={cn(
@@ -59,7 +67,7 @@ export default function BudgetProgress({ expenses, budgets }: BudgetProgressProp
                     isOver ? "bg-red-500" : ""
                   )}
                   style={{ 
-                    backgroundColor: isOver ? undefined : CATEGORY_COLORS[category] 
+                    backgroundColor: isOver ? undefined : getCategoryColor(category) 
                   }}
                 />
               </div>

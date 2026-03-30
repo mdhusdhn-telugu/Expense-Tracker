@@ -2,7 +2,8 @@ import { useRef } from 'react';
 import { X, Download, FileText, TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
-import { Expense, Income, CategoryBudget, CATEGORIES, CATEGORY_COLORS } from '../types';
+import { Expense, Income, CategoryBudget, CategoryDefinition } from '../types';
+import { formatCurrency } from '../lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -12,7 +13,9 @@ interface MonthlyReportModalProps {
   expenses: Expense[];
   incomes: Income[];
   budgets: CategoryBudget;
+  categories: CategoryDefinition[];
   currentMonth: Date;
+  currency: string;
 }
 
 export default function MonthlyReportModal({ 
@@ -21,9 +24,15 @@ export default function MonthlyReportModal({
   expenses, 
   incomes, 
   budgets, 
-  currentMonth 
+  categories,
+  currentMonth,
+  currency
 }: MonthlyReportModalProps) {
   const reportRef = useRef<HTMLDivElement>(null);
+
+  const getCategoryColor = (categoryName: string) => {
+    return categories.find(c => c.name === categoryName)?.color || '#94a3b8';
+  };
 
   const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -31,15 +40,16 @@ export default function MonthlyReportModal({
   
   const totalBudget = Object.values(budgets).reduce((sum, b) => sum + (Number(b) || 0), 0);
 
-  const expensesByCategory = CATEGORIES.map(category => {
+  const expensesByCategory = categories.map(cat => {
     const amount = expenses
-      .filter(exp => exp.category === category)
+      .filter(exp => exp.category === cat.name)
       .reduce((sum, exp) => sum + exp.amount, 0);
-    const budget = budgets[category] || 0;
+    const budget = budgets[cat.name] || 0;
     const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
     
     return {
-      category,
+      category: cat.name,
+      color: cat.color,
       amount,
       budget,
       percentage,
@@ -123,21 +133,21 @@ export default function MonthlyReportModal({
                       <TrendingUp size={18} />
                       <span className="text-xs font-bold uppercase tracking-wider">Total Income</span>
                     </div>
-                    <p className="text-2xl font-black text-emerald-700">${totalIncome.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-emerald-700">{formatCurrency(totalIncome, currency)}</p>
                   </div>
                   <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100">
                     <div className="flex items-center gap-2 text-rose-600 mb-2">
                       <TrendingDown size={18} />
                       <span className="text-xs font-bold uppercase tracking-wider">Total Expenses</span>
                     </div>
-                    <p className="text-2xl font-black text-rose-700">${totalExpenses.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-rose-700">{formatCurrency(totalExpenses, currency)}</p>
                   </div>
                   <div className="p-6 bg-slate-900 rounded-2xl shadow-xl shadow-slate-200">
                     <div className="flex items-center gap-2 text-slate-400 mb-2">
                       <Wallet size={18} />
                       <span className="text-xs font-bold uppercase tracking-wider">Net Balance</span>
                     </div>
-                    <p className="text-2xl font-black text-white">${netBalance.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-white">{formatCurrency(netBalance, currency)}</p>
                   </div>
                 </div>
 
@@ -158,7 +168,7 @@ export default function MonthlyReportModal({
                       <div className="text-right">
                         <p className="text-slate-500 text-sm font-medium">Remaining</p>
                         <p className={`text-xl font-bold ${totalBudget - totalExpenses >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          ${(totalBudget - totalExpenses).toLocaleString()}
+                          {formatCurrency(totalBudget - totalExpenses, currency)}
                         </p>
                       </div>
                     </div>
@@ -182,12 +192,12 @@ export default function MonthlyReportModal({
                       <div key={item.category} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-slate-200 transition-all">
                         <div 
                           className="w-3 h-12 rounded-full"
-                          style={{ backgroundColor: CATEGORY_COLORS[item.category] }}
+                          style={{ backgroundColor: item.color }}
                         ></div>
                         <div className="flex-1">
                           <div className="flex justify-between items-center mb-1">
                             <span className="font-bold text-slate-800">{item.category}</span>
-                            <span className="text-sm font-black text-slate-900">${item.amount.toLocaleString()}</span>
+                            <span className="text-sm font-black text-slate-900">{formatCurrency(item.amount, currency)}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs text-slate-500">
                             <span>{item.percentage.toFixed(1)}% of total</span>
