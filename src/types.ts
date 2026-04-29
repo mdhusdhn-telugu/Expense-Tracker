@@ -1,8 +1,21 @@
 export type Category = string;
 export type IncomeCategory = string;
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL: string;
+  currency: string; // code
+  budgets: CategoryBudget;
+  notificationSettings: NotificationSettings;
+  expenseCategories: CategoryDefinition[];
+  incomeCategories: CategoryDefinition[];
+}
+
 export interface CategoryDefinition {
   id: string;
+  uid?: string;
   name: string;
   color: string;
   type: 'expense' | 'income';
@@ -10,6 +23,7 @@ export interface CategoryDefinition {
 
 export interface FinancialGoal {
   id: string;
+  uid?: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
@@ -19,6 +33,7 @@ export interface FinancialGoal {
 
 export interface Expense {
   id: string;
+  uid?: string;
   amount: number;
   category: Category;
   description: string;
@@ -27,6 +42,7 @@ export interface Expense {
 
 export interface Income {
   id: string;
+  uid?: string;
   amount: number;
   category: IncomeCategory;
   description: string;
@@ -35,6 +51,7 @@ export interface Income {
 
 export interface RecurringBill {
   id: string;
+  uid?: string;
   amount: number;
   category: Category;
   description: string;
@@ -45,14 +62,17 @@ export interface RecurringBill {
 
 export interface Investment {
   id: string;
+  uid?: string;
   name: string;
-  amount: number;
+  amount: number; // Current Value
+  costBasis: number;
   type: 'Stocks' | 'Crypto' | 'Real Estate' | 'Bonds' | 'Other';
-  date: string;
+  date: string; // Date Acquired
 }
 
 export interface Liability {
   id: string;
+  uid?: string;
   name: string;
   amount: number;
   type: 'Loan' | 'Mortgage' | 'Credit Card' | 'Other';

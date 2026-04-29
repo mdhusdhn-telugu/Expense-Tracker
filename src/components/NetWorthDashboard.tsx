@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, TrendingDown, Landmark, CreditCard, Plus, Trash2, PieChart, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Landmark, CreditCard, Plus, Trash2, PieChart, ArrowUpRight, ArrowDownRight, Edit2, X } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachMonthOfInterval } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Expense, Income, FinancialGoal, Investment, Liability } from '../types';
@@ -13,6 +13,7 @@ interface NetWorthDashboardProps {
   investments: Investment[];
   liabilities: Liability[];
   onAddInvestment: (inv: Omit<Investment, 'id'>) => void;
+  onUpdateInvestment: (id: string, updates: Partial<Investment>) => void;
   onDeleteInvestment: (id: string) => void;
   onAddLiability: (liab: Omit<Liability, 'id'>) => void;
   onDeleteLiability: (id: string) => void;
@@ -26,6 +27,7 @@ export default function NetWorthDashboard({
   investments,
   liabilities,
   onAddInvestment,
+  onUpdateInvestment,
   onDeleteInvestment,
   onAddLiability,
   onDeleteLiability,
@@ -33,9 +35,11 @@ export default function NetWorthDashboard({
 }: NetWorthDashboardProps) {
   const [showAddInv, setShowAddInv] = useState(false);
   const [showAddLiab, setShowAddLiab] = useState(false);
+  const [editingInv, setEditingInv] = useState<Investment | null>(null);
   const [newInv, setNewInv] = useState<Omit<Investment, 'id'>>({
     name: '',
     amount: 0,
+    costBasis: 0,
     type: 'Stocks',
     date: new Date().toISOString().split('T')[0]
   });
@@ -99,8 +103,16 @@ export default function NetWorthDashboard({
   const handleAddInvestment = (e: React.FormEvent) => {
     e.preventDefault();
     onAddInvestment(newInv);
-    setNewInv({ name: '', amount: 0, type: 'Stocks', date: new Date().toISOString().split('T')[0] });
+    setNewInv({ name: '', amount: 0, costBasis: 0, type: 'Stocks', date: new Date().toISOString().split('T')[0] });
     setShowAddInv(false);
+  };
+
+  const handleUpdateInvestment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInv) return;
+    const { id, ...updates } = editingInv;
+    onUpdateInvestment(id, updates);
+    setEditingInv(null);
   };
 
   const handleAddLiability = (e: React.FormEvent) => {
@@ -266,6 +278,17 @@ export default function NetWorthDashboard({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Cost Basis</label>
+                  <input 
+                    type="number" 
+                    required
+                    value={newInv.costBasis || ''}
+                    onChange={e => setNewInv({...newInv, costBasis: parseFloat(e.target.value)})}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Type</label>
                   <select 
                     value={newInv.type}
@@ -303,31 +326,145 @@ export default function NetWorthDashboard({
             {investments.length === 0 ? (
               <p className="text-center py-8 text-slate-400 text-sm font-medium italic">No investments added yet.</p>
             ) : (
-              investments.map(inv => (
-                <div key={inv.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white text-blue-600 rounded-lg shadow-sm">
-                      <TrendingUp size={16} />
+              investments.map(inv => {
+                const profit = inv.amount - inv.costBasis;
+                const profitPercent = inv.costBasis > 0 ? (profit / inv.costBasis) * 100 : 0;
+                
+                return (
+                  <div key={inv.id} className="p-4 bg-slate-50 rounded-xl group relative">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white text-blue-600 rounded-lg shadow-sm">
+                          <TrendingUp size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">{inv.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">{inv.type} • Acquired {format(parseISO(inv.date), 'MMM d, yyyy')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setEditingInv(inv)}
+                          className="p-1.5 text-slate-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => onDeleteInvestment(inv.id)}
+                          className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{inv.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">{inv.type}</p>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Current Value</p>
+                        <p className="text-sm font-black text-slate-900">{formatCurrency(inv.amount, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cost Basis</p>
+                        <p className="text-sm font-bold text-slate-600">{formatCurrency(inv.costBasis, currency)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Profit/Loss</p>
+                        <p className={`text-sm font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {profit >= 0 ? '+' : ''}{formatCurrency(profit, currency)}
+                          <span className="text-[10px] ml-1">({profitPercent.toFixed(1)}%)</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-black text-slate-900">{formatCurrency(inv.amount, currency)}</span>
-                    <button 
-                      onClick={() => onDeleteInvestment(inv.id)}
-                      className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
+
+        {/* Edit Investment Modal */}
+        {editingInv && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-800">Edit Investment</h3>
+                <button onClick={() => setEditingInv(null)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleUpdateInvestment} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editingInv.name}
+                    onChange={e => setEditingInv({...editingInv, name: e.target.value})}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Current Value</label>
+                    <input 
+                      type="number" 
+                      required
+                      value={editingInv.amount}
+                      onChange={e => setEditingInv({...editingInv, amount: parseFloat(e.target.value)})}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Cost Basis</label>
+                    <input 
+                      type="number" 
+                      required
+                      value={editingInv.costBasis}
+                      onChange={e => setEditingInv({...editingInv, costBasis: parseFloat(e.target.value)})}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Type</label>
+                    <select 
+                      value={editingInv.type}
+                      onChange={e => setEditingInv({...editingInv, type: e.target.value as any})}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="Stocks">Stocks</option>
+                      <option value="Crypto">Crypto</option>
+                      <option value="Real Estate">Real Estate</option>
+                      <option value="Bonds">Bonds</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Date Acquired</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={editingInv.date}
+                      onChange={e => setEditingInv({...editingInv, date: e.target.value})}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit"
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 mt-2"
+                >
+                  Save Changes
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
 
         {/* Liabilities Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">

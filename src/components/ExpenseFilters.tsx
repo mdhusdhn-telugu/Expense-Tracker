@@ -1,5 +1,17 @@
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Category, CategoryDefinition } from '../types';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  subMonths, 
+  startOfQuarter, 
+  endOfQuarter, 
+  subQuarters, 
+  startOfYear, 
+  endOfYear, 
+  subYears 
+} from 'date-fns';
 
 export interface FilterCriteria {
   search: string;
@@ -40,8 +52,48 @@ export default function ExpenseFilters({ filters, onFilterChange, categories }: 
     filters.startDate !== '' || 
     filters.endDate !== '';
 
+  const setPreset = (preset: 'thisMonth' | 'lastMonth' | 'lastQuarter' | 'thisYear' | 'lastYear') => {
+    const today = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (preset) {
+      case 'thisMonth':
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+        break;
+      case 'lastMonth':
+        const lastMonth = subMonths(today, 1);
+        start = startOfMonth(lastMonth);
+        end = endOfMonth(lastMonth);
+        break;
+      case 'lastQuarter':
+        const lastQuarter = subQuarters(today, 1);
+        start = startOfQuarter(lastQuarter);
+        end = endOfQuarter(lastQuarter);
+        break;
+      case 'thisYear':
+        start = startOfYear(today);
+        end = endOfYear(today);
+        break;
+      case 'lastYear':
+        const lastYear = subYears(today, 1);
+        start = startOfYear(lastYear);
+        end = endOfYear(lastYear);
+        break;
+      default:
+        return;
+    }
+
+    onFilterChange({
+      ...filters,
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd'),
+    });
+  };
+
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-slate-800">
           <Filter size={18} className="text-slate-400" />
@@ -56,6 +108,29 @@ export default function ExpenseFilters({ filters, onFilterChange, categories }: 
             Clear All
           </button>
         )}
+      </div>
+
+      {/* Date Presets */}
+      <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 mr-2 text-slate-400">
+          <CalendarIcon size={14} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Presets:</span>
+        </div>
+        {[
+          { label: 'This Month', type: 'thisMonth' },
+          { label: 'Last Month', type: 'lastMonth' },
+          { label: 'Last Quarter', type: 'lastQuarter' },
+          { label: 'This Year', type: 'thisYear' },
+          { label: 'Last Year', type: 'lastYear' },
+        ].map((preset) => (
+          <button
+            key={preset.type}
+            onClick={() => setPreset(preset.type as any)}
+            className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg text-xs font-bold transition-all border border-slate-100 hover:border-blue-100"
+          >
+            {preset.label}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

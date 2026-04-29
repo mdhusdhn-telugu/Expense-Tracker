@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user settings and profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "currency": { "type": "string" },
+        "budgets": { "type": "object" },
+        "notificationSettings": { "type": "object" },
+        "expenseCategories": { "type": "array" },
+        "incomeCategories": { "type": "array" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A single expense transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "amount", "category", "date"]
+    },
+    "Income": {
+      "title": "Income",
+      "description": "A single income transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "amount", "category", "date"]
+    },
+    "FinancialGoal": {
+      "title": "Financial Goal",
+      "description": "A savings or financial target",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "deadline": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "uid", "name", "targetAmount", "currentAmount"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "description": "An investment asset",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "costBasis": { "type": "number" },
+        "type": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "uid", "name", "amount", "costBasis", "type", "date"]
+    },
+    "Liability": {
+      "title": "Liability",
+      "description": "A financial liability or debt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "uid", "name", "amount", "type", "date"]
+    },
+    "RecurringBill": {
+      "title": "Recurring Bill",
+      "description": "A bill that repeats monthly",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "integer" },
+        "reminderDaysBefore": { "type": "integer" },
+        "lastNotifiedMonth": { "type": "string" }
+      },
+      "required": ["id", "uid", "amount", "category", "description", "dueDate"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile and settings"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "User expenses"
+    },
+    "/incomes/{incomeId}": {
+      "schema": "Income",
+      "description": "User incomes"
+    },
+    "/goals/{goalId}": {
+      "schema": "FinancialGoal",
+      "description": "User financial goals"
+    },
+    "/investments/{investmentId}": {
+      "schema": "Investment",
+      "description": "User investments"
+    },
+    "/liabilities/{liabilityId}": {
+      "schema": "Liability",
+      "description": "User liabilities"
+    },
+    "/bills/{billId}": {
+      "schema": "RecurringBill",
+      "description": "User recurring bills"
+    }
+  }
+}

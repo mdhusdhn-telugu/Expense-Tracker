@@ -1,0 +1,169 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string
+    //   - photoURL: string (uri format)
+    //   - currency: string
+    //   - budgets: map
+    //   - notificationSettings: map
+    //   - expenseCategories: list
+    //   - incomeCategories: list
+    //
+    // Collection: expenses, incomes, goals, investments, liabilities, bills
+    // Document ID: {id}
+    // Fields:
+    //   - id: string (required)
+    //   - uid: string (required, owner's uid)
+    //   - amount: number (required)
+    //   ... (other fields per entity)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "mdhusdhndegree@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email);
+    }
+
+    function isValidTransaction(data) {
+      return hasRequiredFields(['id', 'uid', 'amount', 'category', 'date']) &&
+             data.uid == request.auth.uid &&
+             data.amount is number;
+    }
+
+    function isValidGoal(data) {
+      return hasRequiredFields(['id', 'uid', 'name', 'targetAmount', 'currentAmount']) &&
+             data.uid == request.auth.uid &&
+             data.targetAmount is number &&
+             data.currentAmount is number;
+    }
+
+    function isValidInvestment(data) {
+      return hasRequiredFields(['id', 'uid', 'name', 'amount', 'costBasis', 'type', 'date']) &&
+             data.uid == request.auth.uid &&
+             data.amount is number &&
+             data.costBasis is number;
+    }
+
+    function isValidLiability(data) {
+      return hasRequiredFields(['id', 'uid', 'name', 'amount', 'type', 'date']) &&
+             data.uid == request.auth.uid &&
+             data.amount is number;
+    }
+
+    function isValidBill(data) {
+      return hasRequiredFields(['id', 'uid', 'amount', 'category', 'description', 'dueDate']) &&
+             data.uid == request.auth.uid &&
+             data.amount is number &&
+             data.dueDate is int && data.dueDate >= 1 && data.dueDate <= 31;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /expenses/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidTransaction(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /incomes/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidTransaction(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /goals/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidGoal(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidGoal(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /investments/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidInvestment(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidInvestment(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /liabilities/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidLiability(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidLiability(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /bills/{id} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidBill(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidBill(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+  }
+}
